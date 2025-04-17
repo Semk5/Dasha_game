@@ -32,6 +32,9 @@ def draw_text(text, font, color, surface, pos, antialias=True, centerX=False, ce
         y -= font.size(text)[0] // 2
     surface.blit(text_object, (x,y))
 
+def loading_screen(screen,font):
+    screen.blit(load_image(rf"data/sprites/main menu/background/frame_00_delay-0.1s.png"),(0,0))
+    draw_text("Loading...", font, Color("gainsboro"), screen, (480, 480), centerX=True)
 
 class Background(pygame.sprite.Sprite):
     def __init__(self, image_input, pos):
@@ -61,12 +64,18 @@ def main():
     frame_number = 0
     selected_item = 0
     max_items = 1
+    music_volume = 1
     pygame.display.set_caption("The elder scrolls 0: мужик в лесу")
-    caption_font = pygame.font.Font(r"data\fonts\AncientModernTalesPixel.ttf", 60)
+    caption_font = pygame.font.Font(r"data/fonts/AncientModernTalesPixel.ttf", 60)
+    usual_font = pygame.font.Font(r"data/fonts/antiquity-print.ttf", 40)
     default_font = pygame.font.Font(None,40)
-    background_frames = [load_image(rf"data\sprites\background\{file}") for file in os.listdir(r"data\sprites\background")]
+    loading_screen(screen,usual_font)
+    background_frames = [load_image(rf"data/sprites/main menu/background/{file}") for file in os.listdir(
+        r"data/sprites/main menu/background")]
     background = Background(background_frames, (0, 0))
-
+    pygame.mixer.music.load(fr"data/music/main menu/Guts.mp3")
+    pygame.mixer.music.set_volume(music_volume)
+    pygame.mixer.music.play(-1)
     while running:
         if game_state == 0:
             for event in pygame.event.get():
@@ -83,7 +92,7 @@ def main():
                         running = False
             if frame_number % 4 == 0: background.change_frame()
             screen.blit(background.image, background.rect)
-            draw_text("The elder scrolls 0", caption_font, Color("gainsboro"),screen,(480,200),antialias=False,centerX=True)
+            draw_text("The elder scrolls 0:", caption_font, Color("gainsboro"),screen,(480,200),antialias=False,centerX=True)
             draw_text("FOREST", caption_font, Color("firebrick2"),screen,(480,300),antialias=False,centerX=True)
             draw_text("-> Start game" if selected_item == 0 else "Start game", caption_font, Color("firebrick2") if selected_item == 0 else Color("gainsboro"), screen, (480, 500), centerX=True)
             draw_text("-> Exit" if selected_item == 1 else "Exit", caption_font, Color("firebrick2") if selected_item == 1 else Color("gainsboro"), screen, (480, 600), centerX=True)
