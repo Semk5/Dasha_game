@@ -38,14 +38,16 @@ def generate_level(file, images):
     for y in range(len(level)):
         for x in range(len(level[y])):
             if level[y][x] == "#":
-                Tile(tiles,x,y,"wall",images)
+                Tile(x,y,"wall",random.choice(images["wall"]))
             if level[y][x] == ".":
-                Tile(tiles,x,y,"empty",images)
+                Tile(x,y,"empty",images["empty"])
             if level[y][x] == "|":
-                Tile(tiles, x, y, "river_vertical", images)
+                Tile(x, y, "river", images["river"])
             if level[y][x] == "@":
-                Tile(tiles,x,y,"empty",images)
+                Tile(x,y,"empty",images["empty"])
                 pl = Player(x,y)
+            if level[y][x] == "$":
+                Mushroom(x,y)
     return pl
 
 def loading_screen(scr, font):
@@ -53,10 +55,23 @@ def loading_screen(scr, font):
     draw_text("Loading...", font, pygame.Color("gainsboro"), scr, (480, 480), centerX=True)
 
 class Tile(pygame.sprite.Sprite):
-    def __init__(self,group,pos_x,pos_y, tile_type, tile_images):
-        super().__init__(group)
-        self.image = tile_images[tile_type]
+    def __init__(self, pos_x, pos_y, tile_type, image):
+        super().__init__(tiles)
+        self.type = tile_type
+        self.image = image
         self.rect = self.image.get_rect().move(pos_x*TILE_SIZE,pos_y*TILE_SIZE)
+    def get_type(self):
+            return self.type
+
+class Mushroom(pygame.sprite.Sprite):
+    def __init__(self, pos_x, pos_y):
+        super().__init__(mushrooms)
+        self.image = mushroom_image
+        self.rect = self.image.get_rect().move(pos_x * TILE_SIZE + random.randint(0,40), pos_y * TILE_SIZE + random.randint(0,40))
+    def take_mushroom(self):
+        global score
+        score+=1
+        mushrooms.remove(self)
 
 class Player(pygame.sprite.Sprite):
     def __init__(self,pos_x,pos_y):
@@ -68,13 +83,38 @@ class Player(pygame.sprite.Sprite):
     def directional_move(self, dest):  # 1 - up, 2 - down, 3 - left, 4 - right
         if dest == 1 and self.y > 0:
             self.y -= 1
-        if dest == 2 and self.y < 15:
+            self.rect = self.image.get_rect().move(self.x * TILE_SIZE, self.y * TILE_SIZE)
+            collider = pygame.sprite.spritecollideany(self,tiles)
+            if collider:
+                if collider.get_type() == "wall" or collider.get_type() == "river":
+                    self.y += 1
+                    self.rect = self.image.get_rect().move(self.x * TILE_SIZE, self.y * TILE_SIZE)
+        if dest == 2 and self.y < 14:
             self.y += 1
+            self.rect = self.image.get_rect().move(self.x * TILE_SIZE, self.y * TILE_SIZE)
+            collider = pygame.sprite.spritecollideany(self, tiles)
+            if collider:
+                if collider.get_type() == "wall" or collider.get_type() == "river":
+                    self.y -= 1
+                    self.rect = self.image.get_rect().move(self.x * TILE_SIZE, self.y * TILE_SIZE)
         if dest == 3 and self.x > 0:
             self.x -= 1
-        if dest == 4 and self.x < 15:
+            self.rect = self.image.get_rect().move(self.x * TILE_SIZE, self.y * TILE_SIZE)
+            collider = pygame.sprite.spritecollideany(self, tiles)
+            if collider:
+                if collider.get_type() == "wall" or collider.get_type() == "river":
+                    self.x += 1
+                    self.rect = self.image.get_rect().move(self.x * TILE_SIZE, self.y * TILE_SIZE)
+        if dest == 4 and self.x < 14:
             self.x += 1
-        self.rect = self.image.get_rect().move(self.x * TILE_SIZE, self.y * TILE_SIZE)
+            self.rect = self.image.get_rect().move(self.x * TILE_SIZE, self.y * TILE_SIZE)
+            collider = pygame.sprite.spritecollideany(self, tiles)
+            if collider:
+                if collider.get_type() == "wall" or collider.get_type() == "river":
+                    self.x -= 1
+                    self.rect = self.image.get_rect().move(self.x * TILE_SIZE, self.y * TILE_SIZE)
+        collider = pygame.sprite.spritecollideany(self,mushrooms)
+        if collider: collider.take_mushroom()
 
 class Background(pygame.sprite.Sprite):
     def __init__(self, image_input, pos):
@@ -103,20 +143,25 @@ if __name__ == '__main__':
     selected_item = 0
     max_items = 1
     music_volume = 1
+    score = 0
     player_image = load_image(r"data/sprites/level/player.png")
+    mushroom_image = load_image(r"data/sprites/level/Brown_Mushroom.png")
     level_images ={
-        "wall":load_image(r"data/sprites/level/tree.png"),
-        "river_vertical":load_image(r"data/sprites/level/water.png"),
-        "empty":load_image(r"data/sprites/level/empty.png")
+        "wall":[load_image(rf"data/sprites/level/plants/{file}") for file in os.listdir(r"data/sprites/level/plants")],
+        "river":load_image(r"data/sprites/level/water.png"),
+        "empty":load_image(r"data/sprites/level/empty.png"),
         }
     tiles = pygame.sprite.Group()
+    mushrooms = pygame.sprite.Group()
     game_background = load_image(r"data/sprites/level/background.png")
-    player = generate_level(r"data/levels/1.lvl", level_images)
-    pygame.display.set_caption("The elder scrolls 0: мужик в лесу")
+    levels = [r"data/levels/1.txt"]
+    current_level = 0
+    player = generate_level(levels[current_level], level_images)
+    pygame.display.set_caption("ГРИБНИК")
+    game_font = pygame.font.Font(r"data/fonts/antiquity-print.ttf", 30)
     caption_font = pygame.font.Font(r"data/fonts/AncientModernTalesPixel.ttf", 60)
     default_font = pygame.font.Font(None, 40)
-    background_frames = [load_image(rf"data/sprites/main menu/background/{file}") for file in os.listdir(
-        r"data/sprites/main menu/background")]
+    background_frames = [load_image(rf"data/sprites/main menu/background/{file}") for file in os.listdir(r"data/sprites/main menu/background")]
     background = Background(background_frames, (0, 0))
     pygame.mixer.music.load(fr"data/music/main menu/Guts.mp3")
     pygame.mixer.music.set_volume(music_volume)
@@ -137,9 +182,7 @@ if __name__ == '__main__':
                         running = False
             if frame_number % 4 == 0: background.change_frame()
             screen.blit(background.image, background.rect)
-            draw_text("The elder scrolls 0:", caption_font, pygame.Color("gainsboro"), screen, (480, 200),
-                      antialias=False, centerX=True)
-            draw_text("FOREST", caption_font, pygame.Color("firebrick2"), screen, (480, 300), antialias=False,
+            draw_text("GRIBNIK", caption_font, pygame.Color("firebrick2"), screen, (480, 200), antialias=False,
                       centerX=True)
             draw_text("-> Start game" if selected_item == 0 else "Start game", caption_font,
                       pygame.Color("firebrick2") if selected_item == 0 else pygame.Color("gainsboro"), screen,
@@ -164,8 +207,10 @@ if __name__ == '__main__':
                     if event.key == pygame.K_d:
                         player.directional_move(4)
             screen.blit(game_background,[0,0])
-            screen.blit(player.image,player.rect)
             tiles.draw(screen)
+            mushrooms.draw(screen)
+            draw_text(f"Score: {score}", game_font, pygame.Color("white"), screen, (20, 20), antialias=False)
+            screen.blit(player.image,player.rect)
             pygame.display.flip()
         if game_state == 2:
             pass
