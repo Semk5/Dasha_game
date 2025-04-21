@@ -54,6 +54,14 @@ def loading_screen(scr, font):
     scr.blit(load_image(rf"data/sprites/main menu/background/frame_00_delay-0.1s.png"), (0, 0))
     draw_text("Loading...", font, pygame.Color("gainsboro"), scr, (480, 480), centerX=True)
 
+def next_level():
+    global current_level
+    global level_loaded
+    current_level += 1
+    level_loaded = False
+    mushrooms.empty()
+    tiles.empty()
+
 class Tile(pygame.sprite.Sprite):
     def __init__(self, pos_x, pos_y, tile_type, image):
         super().__init__(tiles)
@@ -138,12 +146,15 @@ if __name__ == '__main__':
     loading_screen(screen, usual_font)
     clock = pygame.time.Clock()
     game_state = 0  # 0 - main menu, 1 - game, 2 - end screen
+    level_loaded = True
     running = True
     frame_number = 0
     selected_item = 0
     max_items = 1
     music_volume = 1
     score = 0
+    current_level = 0
+    time = 0
     player_image = load_image(r"data/sprites/level/player.png")
     mushroom_image = load_image(r"data/sprites/level/Brown_Mushroom.png")
     level_images ={
@@ -154,8 +165,7 @@ if __name__ == '__main__':
     tiles = pygame.sprite.Group()
     mushrooms = pygame.sprite.Group()
     game_background = load_image(r"data/sprites/level/background.png")
-    levels = [r"data/levels/1.txt"]
-    current_level = 0
+    levels = [r"data/levels/1.txt", r"data/levels/2.txt"]
     player = generate_level(levels[current_level], level_images)
     pygame.display.set_caption("ГРИБНИК")
     game_font = pygame.font.Font(r"data/fonts/antiquity-print.ttf", 30)
@@ -163,6 +173,8 @@ if __name__ == '__main__':
     default_font = pygame.font.Font(None, 40)
     background_frames = [load_image(rf"data/sprites/main menu/background/{file}") for file in os.listdir(r"data/sprites/main menu/background")]
     background = Background(background_frames, (0, 0))
+    path = load_image(r"data/sprites/level/Path.png")
+    house = load_image(r"data/sprites/level/House.png")
     pygame.mixer.music.load(fr"data/music/main menu/Guts.mp3")
     pygame.mixer.music.set_volume(music_volume)
     pygame.mixer.music.play(-1)
@@ -191,7 +203,7 @@ if __name__ == '__main__':
                       pygame.Color("firebrick2") if selected_item == 1 else pygame.Color("gainsboro"), screen,
                       (480, 600), centerX=True)
             pygame.display.flip()
-            frame_number = frame_number + 1 if frame_number < 60 else 0
+            frame_number = frame_number + 1 if frame_number <= 60 else 0
             clock.tick(FPS)
         if game_state == 1:
             for event in pygame.event.get():
@@ -206,11 +218,47 @@ if __name__ == '__main__':
                         player.directional_move(3)
                     if event.key == pygame.K_d:
                         player.directional_move(4)
+            if not level_loaded:
+                player = generate_level(levels[current_level], level_images)
+                level_loaded = True
             screen.blit(game_background,[0,0])
             tiles.draw(screen)
             mushrooms.draw(screen)
-            draw_text(f"Score: {score}", game_font, pygame.Color("white"), screen, (20, 20), antialias=False)
             screen.blit(player.image,player.rect)
+            draw_text(f"Score: {score}", game_font, pygame.Color("white"), screen, (20, 20), antialias=False)
+            draw_text(f"Time: {0 if time//60 < 10 else ""}{time//60}:{0 if time%60 < 10 else ""}{time%60}", game_font, pygame.Color("white"), screen, (20, 60), antialias=False)
+            frame_number = frame_number + 1 if frame_number <= 60 else 0
+            if frame_number == 60: time += 1
             pygame.display.flip()
+            clock.tick(FPS)
+            if current_level == 0 and score == 5:
+                next_level()
+            if current_level == 1 and score == 8:
+                game_state = 2
+                mushrooms.empty()
+                tiles.empty()
         if game_state == 2:
-            pass
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_w:
+                        player.directional_move(1)
+                    if event.key == pygame.K_s:
+                        player.directional_move(2)
+                    if event.key == pygame.K_a:
+                        player.directional_move(3)
+                    if event.key == pygame.K_d:
+                        player.directional_move(4)
+            if not level_loaded:
+                mushrooms.empty()
+                tiles.empty()
+                player = generate_level(r"data/levels/end.txt", level_images)
+                level_loaded = True
+            screen.blit(game_background, [0, 0])
+            screen.blit(path,[448,440])
+            screen.blit(player.image, player.rect)
+            tiles.draw(screen)
+            screen.blit(house, [322,170])
+            pygame.display.flip()
+            clock.tick(FPS)
