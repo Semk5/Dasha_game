@@ -53,10 +53,12 @@ def generate_level(file, images):
 def loading_screen(scr, font):
     scr.blit(load_image(rf"data/sprites/main menu/background/frame_00_delay-0.1s.png"), (0, 0))
     draw_text("Loading...", font, pygame.Color("gainsboro"), scr, (480, 480), centerX=True)
+    pygame.display.flip()
 
 def next_level():
     global current_level
     global level_loaded
+    global last_score
     current_level += 1
     level_loaded = False
     mushrooms.empty()
@@ -84,45 +86,52 @@ class Mushroom(pygame.sprite.Sprite):
 class Player(pygame.sprite.Sprite):
     def __init__(self,pos_x,pos_y):
         super().__init__()
-        self.image = player_image
+        self.image = player_image[0]
         self.x = pos_x
         self.y = pos_y
         self.rect = self.image.get_rect().move(self.x*TILE_SIZE,self.y*TILE_SIZE)
-    def directional_move(self, dest):  # 1 - up, 2 - down, 3 - left, 4 - right
-        if dest == 1 and self.y > 0:
-            self.y -= 1
-            self.rect = self.image.get_rect().move(self.x * TILE_SIZE, self.y * TILE_SIZE)
-            collider = pygame.sprite.spritecollideany(self,tiles)
-            if collider:
-                if collider.get_type() == "wall" or collider.get_type() == "river":
-                    self.y += 1
-                    self.rect = self.image.get_rect().move(self.x * TILE_SIZE, self.y * TILE_SIZE)
-        if dest == 2 and self.y < 14:
-            self.y += 1
-            self.rect = self.image.get_rect().move(self.x * TILE_SIZE, self.y * TILE_SIZE)
-            collider = pygame.sprite.spritecollideany(self, tiles)
-            if collider:
-                if collider.get_type() == "wall" or collider.get_type() == "river":
-                    self.y -= 1
-                    self.rect = self.image.get_rect().move(self.x * TILE_SIZE, self.y * TILE_SIZE)
-        if dest == 3 and self.x > 0:
-            self.x -= 1
-            self.rect = self.image.get_rect().move(self.x * TILE_SIZE, self.y * TILE_SIZE)
-            collider = pygame.sprite.spritecollideany(self, tiles)
-            if collider:
-                if collider.get_type() == "wall" or collider.get_type() == "river":
-                    self.x += 1
-                    self.rect = self.image.get_rect().move(self.x * TILE_SIZE, self.y * TILE_SIZE)
-        if dest == 4 and self.x < 14:
-            self.x += 1
-            self.rect = self.image.get_rect().move(self.x * TILE_SIZE, self.y * TILE_SIZE)
-            collider = pygame.sprite.spritecollideany(self, tiles)
-            if collider:
-                if collider.get_type() == "wall" or collider.get_type() == "river":
-                    self.x -= 1
-                    self.rect = self.image.get_rect().move(self.x * TILE_SIZE, self.y * TILE_SIZE)
-        collider = pygame.sprite.spritecollideany(self,mushrooms)
-        if collider: collider.take_mushroom()
+    def directional_move(self):
+        global moved_recently
+        if not moved_recently:
+            if up_pressed == True and self.y > 0:
+                self.y -= 1
+                self.rect = self.image.get_rect().move(self.x * TILE_SIZE, self.y * TILE_SIZE)
+                collider = pygame.sprite.spritecollideany(self,tiles)
+                self.image = player_image[1]
+                if collider:
+                    if collider.get_type() == "wall" or collider.get_type() == "river":
+                        self.y += 1
+                        self.rect = self.image.get_rect().move(self.x * TILE_SIZE, self.y * TILE_SIZE)
+            if down_pressed == True and self.y < 14:
+                self.y += 1
+                self.rect = self.image.get_rect().move(self.x * TILE_SIZE, self.y * TILE_SIZE)
+                collider = pygame.sprite.spritecollideany(self, tiles)
+                self.image = player_image[0]
+                if collider:
+                    if collider.get_type() == "wall" or collider.get_type() == "river":
+                        self.y -= 1
+                        self.rect = self.image.get_rect().move(self.x * TILE_SIZE, self.y * TILE_SIZE)
+            if left_pressed == True and self.x > 0:
+                self.x -= 1
+                self.rect = self.image.get_rect().move(self.x * TILE_SIZE, self.y * TILE_SIZE)
+                collider = pygame.sprite.spritecollideany(self, tiles)
+                self.image = player_image[2]
+                if collider:
+                    if collider.get_type() == "wall" or collider.get_type() == "river":
+                        self.x += 1
+                        self.rect = self.image.get_rect().move(self.x * TILE_SIZE, self.y * TILE_SIZE)
+            if right_pressed == True and self.x < 14:
+                self.x += 1
+                self.rect = self.image.get_rect().move(self.x * TILE_SIZE, self.y * TILE_SIZE)
+                collider = pygame.sprite.spritecollideany(self, tiles)
+                self.image = player_image[3]
+                if collider:
+                    if collider.get_type() == "wall" or collider.get_type() == "river":
+                        self.x -= 1
+                        self.rect = self.image.get_rect().move(self.x * TILE_SIZE, self.y * TILE_SIZE)
+            collider = pygame.sprite.spritecollideany(self,mushrooms)
+            if collider: collider.take_mushroom()
+            moved_recently = True
 
 class Background(pygame.sprite.Sprite):
     def __init__(self, image_input, pos):
@@ -142,20 +151,23 @@ if __name__ == '__main__':
     pygame.init()
     size = SCREEN_WIDTH, SCREEN_HEIGHT
     screen = pygame.display.set_mode(size)
-    usual_font = pygame.font.Font(r"data/fonts/antiquity-print.ttf", 40)
-    loading_screen(screen, usual_font)
+    game_font = pygame.font.Font(r"data/fonts/PixeloidSans-Bold.ttf", 30)
+    caption_font = pygame.font.Font(r"data/fonts/AncientModernTalesPixel.ttf", 60)
+    loading_screen(screen, caption_font)
     clock = pygame.time.Clock()
     game_state = 0  # 0 - main menu, 1 - game, 2 - end screen
-    level_loaded = True
+    level_loaded = False
     running = True
     frame_number = 0
     selected_item = 0
     max_items = 1
-    music_volume = 1
     score = 0
     current_level = 0
     time = 0
-    player_image = load_image(r"data/sprites/level/player.png")
+    last_score = 0
+    last_mushrooms = 0
+    left_pressed = right_pressed = up_pressed = down_pressed = moved_recently = False
+    player_image = [load_image(r"data/sprites/level/Player_Down.png"),load_image(r"data/sprites/level/Player_Up.png"),load_image(r"data/sprites/level/Player_Left.png"),load_image(r"data/sprites/level/Player_Right.png")]
     mushroom_image = load_image(r"data/sprites/level/Brown_Mushroom.png")
     level_images ={
         "wall":[load_image(rf"data/sprites/level/plants/{file}") for file in os.listdir(r"data/sprites/level/plants")],
@@ -164,20 +176,21 @@ if __name__ == '__main__':
         }
     tiles = pygame.sprite.Group()
     mushrooms = pygame.sprite.Group()
+    house = load_image(r"data/sprites/level/House.png")
     game_background = load_image(r"data/sprites/level/background.png")
     levels = [r"data/levels/1.txt", r"data/levels/2.txt"]
-    player = generate_level(levels[current_level], level_images)
+    number_of_levels = len(levels)
     pygame.display.set_caption("ГРИБНИК")
-    game_font = pygame.font.Font(r"data/fonts/antiquity-print.ttf", 30)
-    caption_font = pygame.font.Font(r"data/fonts/AncientModernTalesPixel.ttf", 60)
-    default_font = pygame.font.Font(None, 40)
     background_frames = [load_image(rf"data/sprites/main menu/background/{file}") for file in os.listdir(r"data/sprites/main menu/background")]
     background = Background(background_frames, (0, 0))
     path = load_image(r"data/sprites/level/Path.png")
-    house = load_image(r"data/sprites/level/House.png")
-    pygame.mixer.music.load(fr"data/music/main menu/Guts.mp3")
-    pygame.mixer.music.set_volume(music_volume)
-    pygame.mixer.music.play(-1)
+    menu_chanel = pygame.mixer.Channel(1)
+    game_chanel = pygame.mixer.Channel(2)
+    game_chanel.set_volume(0)
+    menu_music = pygame.mixer.Sound(r"data/music/main menu/Guts.mp3")
+    game_music = pygame.mixer.Sound(r"data/music/main menu/Guts 8bit.mp3")
+    game_chanel.play(game_music,-1)
+    menu_chanel.play(menu_music,-1)
     while running:
         if game_state == 0:
             for event in pygame.event.get():
@@ -190,6 +203,8 @@ if __name__ == '__main__':
                         selected_item -= 1
                     if event.key == pygame.K_RETURN and selected_item == 0:
                         game_state = 1
+                        menu_chanel.set_volume(0)
+                        game_chanel.set_volume(1)
                     if event.key == pygame.K_RETURN and selected_item == 1:
                         running = False
             if frame_number % 4 == 0: background.change_frame()
@@ -202,6 +217,7 @@ if __name__ == '__main__':
             draw_text("-> Exit" if selected_item == 1 else "Exit", caption_font,
                       pygame.Color("firebrick2") if selected_item == 1 else pygame.Color("gainsboro"), screen,
                       (480, 600), centerX=True)
+            draw_text("Game by %ME%",game_font, pygame.Color("white"), screen, (600, 900), antialias=False)
             pygame.display.flip()
             frame_number = frame_number + 1 if frame_number <= 60 else 0
             clock.tick(FPS)
@@ -211,54 +227,106 @@ if __name__ == '__main__':
                     running = False
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_w:
-                        player.directional_move(1)
+                        up_pressed = True
                     if event.key == pygame.K_s:
-                        player.directional_move(2)
+                        down_pressed = True
                     if event.key == pygame.K_a:
-                        player.directional_move(3)
+                        left_pressed = True
                     if event.key == pygame.K_d:
-                        player.directional_move(4)
+                        right_pressed = True
+                if event.type == pygame.KEYUP:
+                    if event.key == pygame.K_w:
+                        up_pressed = False
+                    if event.key == pygame.K_s:
+                        down_pressed = False
+                    if event.key == pygame.K_a:
+                        left_pressed = False
+                    if event.key == pygame.K_d:
+                        right_pressed = False
+                    moved_recently = False
             if not level_loaded:
                 player = generate_level(levels[current_level], level_images)
                 level_loaded = True
+                last_score = score
+                last_mushrooms = len(mushrooms)
+            player.directional_move()
             screen.blit(game_background,[0,0])
             tiles.draw(screen)
             mushrooms.draw(screen)
             screen.blit(player.image,player.rect)
-            draw_text(f"Score: {score}", game_font, pygame.Color("white"), screen, (20, 20), antialias=False)
-            draw_text(f"Time: {0 if time//60 < 10 else ""}{time//60}:{0 if time%60 < 10 else ""}{time%60}", game_font, pygame.Color("white"), screen, (20, 60), antialias=False)
+            draw_text(f"Score: {score}", game_font, pygame.Color("antiquewhite1"), screen, (20, 20), antialias=False)
+            draw_text(f"Time: {0 if time//60 < 10 else ""}{time//60}:{0 if time%60 < 10 else ""}{time%60}", game_font, pygame.Color("antiquewhite1"), screen, (20, 60), antialias=False)
             frame_number = frame_number + 1 if frame_number <= 60 else 0
+            if frame_number % 8 == 0: moved_recently = False
             if frame_number == 60: time += 1
             pygame.display.flip()
             clock.tick(FPS)
-            if current_level == 0 and score == 5:
-                next_level()
-            if current_level == 1 and score == 8:
+            if score == last_score + last_mushrooms:
+                menu_chanel.set_volume(1)
+                game_chanel.set_volume(0)
+                if current_level != number_of_levels  and player.x == 0 and player.y == 0:
+                    next_level()
+            else:
+                menu_chanel.set_volume(0)
+                game_chanel.set_volume(3)
+            if current_level == number_of_levels and score == last_score + last_mushrooms and player.x == 0 and player.y == 0:
                 game_state = 2
+                menu_chanel.set_volume(1)
+                game_chanel.set_volume(0)
                 mushrooms.empty()
                 tiles.empty()
+                level_loaded = False
         if game_state == 2:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_w:
-                        player.directional_move(1)
+                        up_pressed = True
                     if event.key == pygame.K_s:
-                        player.directional_move(2)
+                        down_pressed = True
                     if event.key == pygame.K_a:
-                        player.directional_move(3)
+                        left_pressed = True
                     if event.key == pygame.K_d:
-                        player.directional_move(4)
+                        right_pressed = True
+                if event.type == pygame.KEYUP:
+                    if event.key == pygame.K_w:
+                        up_pressed = False
+                    if event.key == pygame.K_s:
+                        down_pressed = False
+                    if event.key == pygame.K_a:
+                        left_pressed = False
+                    if event.key == pygame.K_d:
+                        right_pressed = False
+                    moved_recently = False
             if not level_loaded:
                 mushrooms.empty()
                 tiles.empty()
                 player = generate_level(r"data/levels/end.txt", level_images)
                 level_loaded = True
+            player.directional_move()
             screen.blit(game_background, [0, 0])
             screen.blit(path,[448,440])
             screen.blit(player.image, player.rect)
             tiles.draw(screen)
+            if 5 <= player.x <= 9 and 2 <= player.y <= 6:
+                if player.y == 6:
+                    house.set_alpha(150)
+                if player.y == 5:
+                    house.set_alpha(100)
+                if player.y == 4:
+                    house.set_alpha(50)
+                if player.y == 3:
+                    house.set_alpha(100)
+                if player.y == 2:
+                    house.set_alpha(150)
+            else: house.set_alpha(256)
             screen.blit(house, [322,170])
+            draw_text(f"You win!!", game_font,pygame.Color("antiquewhite1"),screen,[480,60],antialias=False,centerX=True)
+            if frame_number > 30:
+                draw_text(f"Time: {0 if time // 60 < 10 else ""}{time // 60}:{0 if time % 60 < 10 else ""}{time % 60}", game_font, pygame.Color("crimson"), screen, [480, 90], antialias=False,centerX=True)
+                draw_text(f"Score: {score}", game_font, pygame.Color("crimson"), screen, [480, 120], antialias=False,centerX=True)
+            frame_number = frame_number + 1 if frame_number <= 60 else 0
+            if frame_number % 6 == 0: moved_recently = False
             pygame.display.flip()
             clock.tick(FPS)
